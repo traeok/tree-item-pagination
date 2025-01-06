@@ -1,0 +1,51 @@
+{
+  "name": "test-pagination-sample",
+  "displayName": "test-pagination-sample",
+  "description": "Sample showing how to implement pagination for tree items",
+  "version": "0.0.1",
+  "publisher": "traeok",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.88.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "tree-item-testing",
+          "title": "Tree Item Testing",
+          "icon": ""
+        }
+      ]
+    },
+    "views": {
+      "tree-item-testing": [
+        {
+          "id": "tree-pagination",
+          "name": "Pagination"
+        }
+      ]
+    }
+  },
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "lint": "eslint",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.13.0",
+    "@stylistic/eslint-plugin": "^2.9.0",
+    "@types/node": "^20",
+    "@types/vscode": "^1.88.0",
+    "eslint": "^9.13.0",
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.11.0"
+  }
+}
