@@ -41,7 +41,7 @@ class PaginatedTreeProvider implements vscode.TreeDataProvider<TreeItem> {
       return new TreeItem(`Item ${id}`);
     });
 
-    this.data = [...this.data.filter((it) => !(it instanceof LoadMoreTreeItem)), ...newItems];
+    this.data = [...this.data.slice(0, -1), ...newItems];
     this.data.push(new LoadMoreTreeItem(this.loadMoreItems.bind(this)));
     this.loadedItems += this.itemsPerPage;
     this._onDidChangeTreeDataEmitter.fire(null);
