@@ -1,72 +1,114 @@
-import * as vscode from 'vscode';
-
-export function activate(_context: vscode.ExtensionContext) {
-	const treeProvider = new PaginatedTreeProvider();
-  vscode.window.registerTreeDataProvider("tree-item-testing", treeProvider);
-  vscode.commands.registerCommand("paginationSample.loadMore", async (callback: () => void | PromiseLike<void>) => {
-    await callback();
-  });
-	return { treeProvider };
-}
+import * as vscode from "vscode";
 
 class PaginatedTreeProvider implements vscode.TreeDataProvider<TreeItem> {
-  private _onDidChangeTreeDataEmitter = new vscode.EventEmitter<TreeItem | null | undefined>();
-  public onDidChangeTreeData?: vscode.Event<TreeItem | null | undefined> | undefined = this._onDidChangeTreeDataEmitter.event;
-  private data: TreeItem[] = [];
-  private loadedItems = 0;
-  private itemsPerPage = 100;
+  // Total number of items (for demonstration)
   private treeView: vscode.TreeView<TreeItem>;
+  private root: TreeItem;
 
-  public constructor() {
-	  this.loadMoreItems();
+  private _onDidChangeTreeData: vscode.EventEmitter<TreeItem | undefined | void> = new vscode.EventEmitter();
+  readonly onDidChangeTreeData: vscode.Event<TreeItem | undefined | void> = this._onDidChangeTreeData.event;
+
+  constructor() {
     this.treeView = vscode.window.createTreeView("tree-pagination", {
       treeDataProvider: this
     });
+    this.root = new TreeItem("Sample Folder", this, vscode.TreeItemCollapsibleState.Collapsed);
+  }
+
+  public onTreeDataChanged() {
+    this._onDidChangeTreeData.fire();
   }
 
   public getTreeItem(element: TreeItem): vscode.TreeItem {
     return element;
   }
 
-  public getChildren(element?: TreeItem | undefined): vscode.ProviderResult<TreeItem[]> {
-    if (element === undefined) {
-      return this.data;
+  public getChildren(element?: TreeItem): TreeItem[] {
+    if (!element) {
+      return [this.root];
+    } else if (element == this.root) {
+      return this.root.getChildren(true);
     }
-    return element.children;
-  }
 
-  public loadMoreItems() {
-    const newItems = Array.from({ length: this.itemsPerPage }, (_v, i) => {
-      const id = this.data.length > 0 ? this.data.length - 1 + i : this.data.length + i; // -1 for the "load more items" item
-      return new TreeItem(`Item ${id}`);
-    });
-
-    this.data = [...this.data.slice(0, -1), ...newItems];
-    this.data.push(new LoadMoreTreeItem(this.loadMoreItems.bind(this)));
-    this.loadedItems += this.itemsPerPage;
-    this._onDidChangeTreeDataEmitter.fire(null);
+    return [];
   }
 }
 
 class TreeItem extends vscode.TreeItem {
-  children: TreeItem[] | undefined;
+  private totalItems = 1000;
+  private itemsPerPage = 25;
+  private currentPage = 0;
 
-  constructor(label: string, children?: TreeItem[]) {
-    super(
-        label,
-        children === undefined ? vscode.TreeItemCollapsibleState.None :
-                                 vscode.TreeItemCollapsibleState.Expanded);
-    this.children = children;
+  constructor(label: string, private treeProvider: PaginatedTreeProvider, collapsibleState = vscode.TreeItemCollapsibleState.None) {
+    super(label, collapsibleState);
+  }
+
+  private previousPage(): void {
+    if (this.currentPage > 0) {
+      this.currentPage--;
+      this.treeProvider.onTreeDataChanged();
+    }
+  }
+
+  private nextPage(): void {
+    const maxPage = Math.ceil(this.totalItems / this.itemsPerPage) - 1;
+    if (this.currentPage < maxPage) {
+      this.currentPage++;
+      this.treeProvider.onTreeDataChanged();
+    }
+  }
+
+  public getChildren(paginate?: boolean): TreeItem[] {
+    if (paginate) {
+      return this.getPaginatedItems();
+    }
+    
+    return [];
+  }
+
+  private getPaginatedItems(): TreeItem[] {
+    const startIndex = this.currentPage * this.itemsPerPage;
+    const endIndex = Math.min(startIndex + this.itemsPerPage, this.totalItems);
+
+    const items: TreeItem[] = [];
+
+    // Add "Previous page" item if not on the first page
+    if (this.currentPage > 0) {
+      items.push(new NavigationTreeItem("Previous page", "arrow-small-left", this.treeProvider, () => this.previousPage()));
+    }
+
+    for (let i = startIndex; i < endIndex; i++) {
+      items.push(new TreeItem(`Item ${i + 1}`, this.treeProvider));
+    }
+
+    // Add "Next page" item if not on the last page
+    if (endIndex < this.totalItems) {
+      items.push(new NavigationTreeItem("Next page", "arrow-small-right", this.treeProvider, () => this.nextPage()));
+    }
+
+    return items;
   }
 }
 
-class LoadMoreTreeItem extends TreeItem {
-  public constructor(callback: () => void | PromiseLike<void>) {
-    super("Load more items...");
+class NavigationTreeItem extends TreeItem {
+  constructor(label: string, icon: string, treeProvider: PaginatedTreeProvider, navigateCallback: () => void) {
+    super(label, treeProvider);
+    this.iconPath = new vscode.ThemeIcon(icon);
     this.command = {
-      command: "paginationSample.loadMore",
-      title: "Load more",
-      arguments: [callback]
+      command: "paginationSample.navigate",
+      title: label,
+      arguments: [navigateCallback],
     };
   }
 }
+
+export function activate(context: vscode.ExtensionContext) {
+  const treeProvider = new PaginatedTreeProvider();
+  vscode.window.registerTreeDataProvider("paginationView", treeProvider);
+
+  vscode.commands.registerCommand("paginationSample.navigate", (callback: () => void) => {
+    callback();
+  });
+}
+
+export function deactivate() {}
