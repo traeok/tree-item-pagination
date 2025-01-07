@@ -71,30 +71,26 @@ class TreeItem extends vscode.TreeItem {
     const endIndex = Math.min(startIndex + this.itemsPerPage, this.totalItems);
 
     const items: TreeItem[] = [];
-
-    // Add "Previous page" item if not on the first page
-    if (this.currentPage > 0) {
-      items.push(new NavigationTreeItem("Previous page", "arrow-small-left", this.treeProvider, () => this.previousPage()));
-    }
+    items.push(new NavigationTreeItem("Previous page", "arrow-small-left", this.treeProvider, this.currentPage == 0, () => this.previousPage()));
 
     for (let i = startIndex; i < endIndex; i++) {
       items.push(new TreeItem(`Item ${i + 1}`, this.treeProvider));
     }
 
-    // Add "Next page" item if not on the last page
-    if (endIndex < this.totalItems) {
-      items.push(new NavigationTreeItem("Next page", "arrow-small-right", this.treeProvider, () => this.nextPage()));
-    }
+    items.push(new NavigationTreeItem("Next page", "arrow-small-right", this.treeProvider, endIndex == this.totalItems, () => this.nextPage()));
 
     return items;
   }
 }
 
 class NavigationTreeItem extends TreeItem {
-  constructor(label: string, icon: string, treeProvider: PaginatedTreeProvider, navigateCallback: () => void) {
+  constructor(label: string, icon: string, treeProvider: PaginatedTreeProvider, disabled: boolean, navigateCallback: () => void) {
     super(label, treeProvider);
     this.iconPath = new vscode.ThemeIcon(icon);
-    this.command = {
+    this.command = disabled ? {
+      command: "paginationSample.disabled",
+      title: ""
+    } : {
       command: "paginationSample.navigate",
       title: label,
       arguments: [navigateCallback],
@@ -104,10 +100,13 @@ class NavigationTreeItem extends TreeItem {
 
 export function activate(context: vscode.ExtensionContext) {
   const treeProvider = new PaginatedTreeProvider();
-  vscode.window.registerTreeDataProvider("paginationView", treeProvider);
+  vscode.window.registerTreeDataProvider("tree-pagination", treeProvider);
 
   vscode.commands.registerCommand("paginationSample.navigate", (callback: () => void) => {
     callback();
+  });
+  vscode.commands.registerCommand("paginationSample.disabled", () => {
+    // This command does nothing, its here to let us disable individual items in the tree view
   });
 }
 

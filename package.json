@@ -29,7 +29,14 @@
           "name": "Pagination"
         }
       ]
-    }
+    },
+    "commands": [
+      {
+        "command": "paginationSample.disabled",
+        "title": "Previous Page",
+        "enablement": "false"
+      }
+    ]
   },
   "activationEvents": [],
   "main": "./out/extension.js",
